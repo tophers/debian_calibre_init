@@ -1,0 +1,105 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          calibre-server
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: calibre-server daemon - server only
+# Description:       Provides a startup service on Debian for calibre-server
+#                  
+### END INIT INFO
+
+NAME=calibre-server
+CALIBRE_BIN_PATH=/opt/calibre
+CALIBRE_LIBRARY_PATH=/opt/library
+RUNAS=calibre
+PORT=8080
+
+
+# Shouldn't need to edit below
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:$CALIBRE_BIN_PATH:$CALIBRE_LIBRARY_PATH
+DESC="calibre-server daemon"
+DAEMON=$CALIBRE_BIN_PATH/$NAME
+DAEMON_ARGS="--with-library="$CALIBRE_LIBRARY_PATH" -p $PORT"
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+[ -x "$DAEMON" ] || exit 0
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+. /lib/init/vars.sh
+. /lib/lsb/init-functions
+
+# Function that starts the daemon/service
+do_start()
+{
+	start-stop-daemon --start --background --quiet --make-pidfile --pidfile $PIDFILE --chuid $RUNAS --exec $DAEMON --test > /dev/null \
+		|| return 1
+	start-stop-daemon --start --background --quiet --make-pidfile --pidfile $PIDFILE --chuid $RUNAS --exec $DAEMON -- \
+		$DAEMON_ARGS \
+		|| return 2
+}
+
+# Function that stops the daemon/service
+do_stop()
+{
+	start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME
+	RETVAL="$?"
+	[ "$RETVAL" = 2 ] && return 2
+	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
+	[ "$?" = 2 ] && return 2
+	rm -f $PIDFILE
+	return "$RETVAL"
+}
+
+# Function that sends a SIGHUP to the daemon/service
+do_reload() {
+	start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME
+	return 0
+}
+
+case "$1" in
+  start)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+	do_start
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	do_stop
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  status)
+       status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+       ;;
+  restart|force-reload)
+	log_daemon_msg "Restarting $DESC" "$NAME"
+	do_stop
+	case "$?" in
+	  0|1)
+		do_start
+		case "$?" in
+			0) log_end_msg 0 ;;
+			1) log_end_msg 1 ;; # Old process is still running
+			*) log_end_msg 1 ;; # Failed to start
+		esac
+		;;
+	  *)
+		log_end_msg 1
+		;;
+	esac
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	exit 3
+	;;
+esac
+
+:
