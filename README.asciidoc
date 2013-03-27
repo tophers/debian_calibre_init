@@ -1,6 +1,5 @@
 Calibre Server - Debian Init Script
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++++++++++++++++++++++++++++++++++++
+Init script with LSB to start Calibre-server on a headless box.
 
-Init script to with LSB to start Calibre-server on a headless box.
-
-Tested on Debian/Ubuntu Server. 
+NOTE: Tested on Debian "Squeeze" 
